@@ -19,7 +19,6 @@ def rectangle_mask(image_path,image_shape):
     rectangles_list=faceRectangle.increase_rectangles(rectangles_list)
     mask = np.zeros(image_shape[:2], dtype=np.uint8)
     for rect in rectangles_list:
-        # Converte dlib.rectangle para coordenadas de topo, esquerda, baixo, direita
         x1, y1, x2, y2 = rect.left(), rect.top(), rect.right(), rect.bottom()
         # Preenche a área do retângulo na máscara
         cv2.rectangle(mask, (x1, y1), (x2, y2), 255, thickness=-1)
@@ -36,7 +35,7 @@ def process_image(image_path, predictor):
     masks = instances.pred_masks.cpu().numpy()
     classes = instances.pred_classes.cpu().numpy()
 
-    # Criar uma máscara combinada para pessoas (classe 0 no COCO)
+    # Criar uma máscara combinada para pessoas
     person_class = 0
     combined_mask = np.zeros_like(masks[0], dtype=np.uint8)
     for i, mask in enumerate(masks):
@@ -45,23 +44,20 @@ def process_image(image_path, predictor):
 
     # Destacar as pessoas na imagem
     highlighted_image = image.copy()
-    highlighted_image[combined_mask > 0] = [0, 255, 0]  # Cor verde para as pessoas
+    highlighted_image[combined_mask > 0] = [0, 255, 0]
 
     return image, cv2.bitwise_and(combined_mask,rectangles_mask), highlighted_image
 
-# Exibir e salvar os resultados
 def display_and_save_results(image, combined_mask, highlighted_image, output_path):
-    # Exibir a máscara e a imagem destacada
     cv2.imshow("Original Image", image)
-    cv2.imshow("Combined Mask", combined_mask * 255)
+    cv2.imshow("Subject Mask", combined_mask * 255)
     cv2.imshow("Highlighted Image", highlighted_image)
     
-    # Salvar os resultados
     cv2.imwrite(output_path + "_mask.png", combined_mask * 255)
     cv2.imwrite(output_path + "_highlighted.png", highlighted_image)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
-predictor=setup_model()
-image,combined_mask,highlighted_image = process_image(sys.argv[1],predictor)
-display_and_save_results(image, combined_mask, highlighted_image, "imagens\output")
+# predictor=setup_model()
+# image,combined_mask,highlighted_image = process_image(sys.argv[1],predictor)
+# display_and_save_results(image, combined_mask, highlighted_image, "imagens\output")
