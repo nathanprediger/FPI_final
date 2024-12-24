@@ -18,19 +18,17 @@ def get_rectangle_faces(file):
 def increase_rectangles(list_rectangles):
     modified_rectangles=[]
     for d in list_rectangles:
-        # Coordenadas originais
         x1, y1 = d.left(), d.top()
         x2, y2 = d.right(), d.bottom()
 
-        # Calcula a altura e largura originais
         height = y2 - y1
         width = x2 - x1
 
         # Ajusta as dimensões
-        # Aumenta a altura em 2 vezes na direção do topo (diminui y1)
+        # Aumenta a altura pela metade no topo e aumenta em um quinto embaixo
         new_y2 = y2 + height // 5
         new_y1 = y1 - height // 2
-        # Aumenta a largura pela metade nas duas direções (expande x1 e x2)
+        # Aumenta a largura pela metade nas duas direções
         new_x1 = x1 - width // 2
         new_x2 = x2 + width // 2
 
