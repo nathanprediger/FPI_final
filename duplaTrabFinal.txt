@@ -1,0 +1,3 @@
+Dupla: Nathan Rambo Prediger e André da Silva Frainer
+1a Opção: Distortion-Free Wide-Angle Portraits on Camera Phones (SIGGRAPH 2019)
+2a Opção: Synthetic depth-of-field with a single-camera mobile phone (SIGGRAPH 2018)
