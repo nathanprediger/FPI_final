@@ -14,8 +14,8 @@ def setup_model():
     cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml")
     cfg.MODEL.DEVICE = "cpu"
     return DefaultPredictor(cfg)
-def rectangle_mask(image_path,image_shape):
-    rectangles_list=faceRectangle.get_rectangle_faces(image_path)
+def rectangle_mask(image,image_shape):
+    rectangles_list=faceRectangle.get_rectangle_faces(image)
     rectangles_list=faceRectangle.increase_rectangles(rectangles_list)
     mask = np.zeros(image_shape[:2], dtype=np.uint8)
     for rect in rectangles_list:
@@ -28,23 +28,29 @@ def process_image(image_path, predictor):
     image_rgb = cv2.cvtColor(image,cv2.COLOR_BGR2RGB)
     
     image_shape=list(image.shape)
-    rectangles_mask = rectangle_mask(image_path,image_shape)
+    rectangles_mask = rectangle_mask(image,image_shape)
     output = predictor(image_rgb)
     
     instances = output["instances"]
     masks = instances.pred_masks.cpu().numpy()
     classes = instances.pred_classes.cpu().numpy()
 
-    # Criar uma máscara combinada para pessoas
     person_class = 0
     combined_mask = np.zeros_like(masks[0], dtype=np.uint8)
     for i, mask in enumerate(masks):
         if classes[i] == person_class:
             combined_mask = np.maximum(combined_mask, mask.astype(np.uint8))
 
-    # Destacar as pessoas na imagem
-    highlighted_image = image.copy()
-    highlighted_image[combined_mask > 0] = [0, 255, 0]
+    # Converter a imagem para RGBA
+    highlighted_image = cv2.cvtColor(image, cv2.COLOR_BGR2BGRA)
+    alpha = 0.5  # Grau de transparência (0 = totalmente transparente, 1 = totalmente opaco)
+    
+    # Adicionar verde com transparência
+    green_overlay = np.zeros_like(highlighted_image, dtype=np.uint8)
+    green_overlay[combined_mask > 0] = [0, 255, 0, int(255 * alpha)]
+
+    # Combinar a imagem original com o overlay verde transparente
+    highlighted_image = cv2.addWeighted(highlighted_image, 1, green_overlay, alpha, 0)
 
     return image, cv2.bitwise_and(combined_mask,rectangles_mask), highlighted_image
 
@@ -58,6 +64,6 @@ def display_and_save_results(image, combined_mask, highlighted_image, output_pat
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
-# predictor=setup_model()
-# image,combined_mask,highlighted_image = process_image(sys.argv[1],predictor)
-# display_and_save_results(image, combined_mask, highlighted_image, "imagens\output")
+predictor=setup_model()
+image,combined_mask,highlighted_image = process_image(sys.argv[1],predictor)
+display_and_save_results(image, combined_mask, highlighted_image, "imagens\output")
