@@ -23,7 +23,8 @@ def rectangle_mask(image,image_shape):
         # Preenche a área do retângulo na máscara
         cv2.rectangle(mask, (x1, y1), (x2, y2), 255, thickness=-1)
     return mask
-def process_image(image_path, predictor):
+def process_image(image_path):
+    predictor=setup_model()
     image = cv2.imread(image_path)
     image_rgb = cv2.cvtColor(image,cv2.COLOR_BGR2RGB)
     
@@ -64,6 +65,5 @@ def display_and_save_results(image, combined_mask, highlighted_image, output_pat
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
-predictor=setup_model()
-image,combined_mask,highlighted_image = process_image(sys.argv[1],predictor)
+image,combined_mask,highlighted_image = process_image(sys.argv[1])
 display_and_save_results(image, combined_mask, highlighted_image, "imagens\output")

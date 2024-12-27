@@ -51,17 +51,17 @@ def show_rectangles(img, rectangles):
     cv2.waitKey(0)  # Aguarda uma tecla ser pressionada
     cv2.destroyAllWindows()  # Fecha todas as janelas
 
-# Carrega a imagem e detecta os rostos
-file=sys.argv[1]
-print("Processing file: {}".format(file))
-image = cv2.imread(file)
-rectangles= get_rectangle_faces(image)
+# # Carrega a imagem e detecta os rostos
+# file=sys.argv[1]
+# print("Processing file: {}".format(file))
+# image = cv2.imread(file)
+# rectangles= get_rectangle_faces(image)
 
-# Ajusta os retângulos
-rectangles = increase_rectangles(rectangles)
+# # Ajusta os retângulos
+# rectangles = increase_rectangles(rectangles)
 
-# Exibe a imagem com os retângulos ajustados
-show_rectangles(image, rectangles)
+# # Exibe a imagem com os retângulos ajustados
+# show_rectangles(image, rectangles)
 
 # Finally, if you really want to you can ask the detector to tell you the score
 # for each detection.  The score is bigger for more confident detections.
