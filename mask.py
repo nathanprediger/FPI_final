@@ -22,14 +22,14 @@ def rectangle_mask(image,image_shape):
         x1, y1, x2, y2 = rect.left(), rect.top(), rect.right(), rect.bottom()
         # Preenche a área do retângulo na máscara
         cv2.rectangle(mask, (x1, y1), (x2, y2), 255, thickness=-1)
-    return mask
+    return mask, rectangles_list
 def process_image(image_path):
     predictor=setup_model()
     image = cv2.imread(image_path)
     image_rgb = cv2.cvtColor(image,cv2.COLOR_BGR2RGB)
     
     image_shape=list(image.shape)
-    rectangles_mask = rectangle_mask(image,image_shape)
+    rectangles_mask, rectangle_list = rectangle_mask(image,image_shape)
     output = predictor(image_rgb)
     
     instances = output["instances"]
@@ -53,7 +53,7 @@ def process_image(image_path):
     # Combinar a imagem original com o overlay verde transparente
     highlighted_image = cv2.addWeighted(highlighted_image, 1, green_overlay, alpha, 0)
 
-    return image, cv2.bitwise_and(combined_mask,rectangles_mask), highlighted_image
+    return image, cv2.bitwise_and(combined_mask,rectangles_mask), highlighted_image, rectangle_list
 
 def display_and_save_results(image, combined_mask, highlighted_image, output_path):
     cv2.imshow("Original Image", image)
@@ -64,6 +64,7 @@ def display_and_save_results(image, combined_mask, highlighted_image, output_pat
     cv2.imwrite(output_path + "_highlighted.png", highlighted_image)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
-
-image,combined_mask,highlighted_image = process_image(sys.argv[1])
-display_and_save_results(image, combined_mask, highlighted_image, "imagens\output")
+if __name__ == "__main__":
+    image,combined_mask,highlighted_image,_ = process_image(sys.argv[1])
+    print(combined_mask.shape, image.shape)
+    display_and_save_results(image, combined_mask, highlighted_image, "imagens\output")
