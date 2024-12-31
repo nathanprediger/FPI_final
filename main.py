@@ -2,7 +2,9 @@ import cv2
 import numpy as np
 from energy import create_optimized_mesh
 from stereographic import get_uniform_stereo_mesh
+import matplotlib.pyplot as plt
 from mask import process_image
+from energy import interpolate_mesh
 
 def apply_mesh_warp(image, optimized_mesh, mesh_ds_ratio):
     """
@@ -49,7 +51,7 @@ if __name__ == "__main__":
     image_path = "imagens/teste3.jpg"
     mesh_ds_ratio = 10
     fov = 97
-    Q = 4
+    Q = 0
     image, face_mask, highlighted_image, rect_list = process_image(image_path)
     H,W,_=image.shape
     half_diagonal = np.linalg.norm([H + 2 * Q * mesh_ds_ratio, W + 2 * Q * mesh_ds_ratio]) / 2.
@@ -57,13 +59,25 @@ if __name__ == "__main__":
     rb = half_diagonal / (2 * np.log(99))
     # Gerar malhas uniforme e estereográfica
     uniform_mesh, stereo_mesh = get_uniform_stereo_mesh(image, np.pi*fov/180, Q, mesh_ds_ratio)
-
     # Criar malha otimizada
-    optimized_mesh = create_optimized_mesh(image, uniform_mesh, stereo_mesh, face_mask, rect_list, ra, rb, 1000)
+    optimized_mesh = create_optimized_mesh(image, uniform_mesh, stereo_mesh, face_mask, rect_list, ra, rb, 1000, mesh_ds_ratio)
   
     # Aplicar a malha otimizada na imagem
+    X_distorted, Y_distorted = uniform_mesh
+    plt.figure(figsize=(12, 18))
+    plt.plot(X_distorted, Y_distorted, color="blue", linewidth=0.5)  # Vertical lines
+    plt.plot(X_distorted.T, Y_distorted.T, color="blue", linewidth=0.5)  # Horizontal lines
+    plt.axis("equal")
+    plt.axis("off")
+    plt.show()
     corrected_image = apply_mesh_warp(image, optimized_mesh, mesh_ds_ratio)
-
+    X_distorted, Y_distorted = optimized_mesh
+    plt.figure(figsize=(12, 18))
+    plt.plot(X_distorted, Y_distorted, color="blue", linewidth=0.5)  # Vertical lines
+    plt.plot(X_distorted.T, Y_distorted.T, color="blue", linewidth=0.5)  # Horizontal lines
+    plt.axis("equal")
+    plt.axis("off")
+    plt.show()
     # Exibir resultados
     cv2.imshow("Imagem Original", image)
     cv2.imshow("Imagem Corrigida", corrected_image)

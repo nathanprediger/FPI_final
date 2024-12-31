@@ -5,6 +5,26 @@ from scipy.optimize import minimize
 import cv2
 import dlib
 count = 0
+
+def resize_mask(mask,mesh_perspective, mesh_ds_ratio):
+    H, W = mesh_perspective.shape[1:]
+    mask_resized = np.zeros(mesh_perspective.shape[1:], dtype=np.uint8)
+    for i in range (H):
+        for j in range(W):
+            counttrue = 0
+            for k in range(mesh_ds_ratio):
+                for l in range(mesh_ds_ratio):
+                    try: 
+                        counttrue += mask[mesh_ds_ratio*i + k][mesh_ds_ratio*j + l]
+                    except:
+                        continue
+            if counttrue >= (mesh_ds_ratio**2)/3:
+                mask_resized[i,j] = 1
+            else:
+                mask_resized[i,j] = 0
+
+    return mask_resized
+
 def calculate_similarity_transform(source_points, target_points):
     """Calcula a transformação de similaridade."""
     if not source_points.size or not target_points.size: # Verifica se os arrays estão vazios
@@ -25,8 +45,6 @@ def calculate_similarity_transform(source_points, target_points):
     t = mean_target - S @ mean_source
 
     return S, t
-import numpy as np
-import dlib
 
 def calculate_energy_f(mask, mesh_estereo, mesh_perspective, rectangle_list, r_a, r_b, W, H):
     num_rects = len(rectangle_list)
@@ -174,7 +192,7 @@ def gaussian_kernel(distance_squared, h=2.37):
     """
     return np.exp(-distance_squared / (2 * h**2))
 
-def interpolate_mesh(mesh_perspective, mesh_stereographic, mask):
+def interpolate_mesh(mesh_perspective, mesh_stereographic, mask, mesh_ratio=10):
     """
     Interpola entre as malhas perspectiva e estereográfica com base na equação (15).
 
@@ -191,10 +209,8 @@ def interpolate_mesh(mesh_perspective, mesh_stereographic, mask):
         Malha interpolada.
     """
     H, W = mesh_perspective.shape[1:]
-
     # Redimensiona a máscara para o tamanho das malhas
-    mask_resized = np.resize(mask, (H, W))
-
+    mask_resized = resize_mask(mask,mesh_perspective,mesh_ratio)
     mesh_interpolated = np.zeros_like(mesh_perspective)
 
     # Calcula os deslocamentos \Delta v_j
@@ -206,31 +222,30 @@ def interpolate_mesh(mesh_perspective, mesh_stereographic, mask):
         for j in range(W):
             if mask_resized[i, j] == 0:
                 # Ignora pontos fora da máscara
-                mesh_interpolated[:, i, j] = mesh_perspective[:, i, j]
-                continue
-
-            # Calcula a distância ao quadrado entre (i, j) e todos os outros pontos
-            pi = np.array([i, j])
-            pj = np.array(np.meshgrid(np.arange(H), np.arange(W), indexing='ij'))
-            pj = pj.reshape(2, -1).T
-
-            distances_squared = np.sum((pj - pi)**2, axis=1).reshape(H, W)
-
-            # Aplica o kernel Gaussiano
-            weights = gaussian_kernel(distances_squared)
-            weights *= mask_resized  # Aplica a máscara
-
-            # Calcula o numerador e o denominador
-            numerator = np.sum(weights * delta_v, axis=(1, 2))
-            denominator = np.sum(weights)
-
-            if denominator > 0:
-                delta_vi_0 = numerator / denominator
+                mesh_interpolated[:,i, j] = mesh_perspective[:,i, j]
             else:
-                delta_vi_0 = 0
+                # Calcula a distância ao quadrado entre (i, j) e todos os outros pontos
+                pi = np.array([i, j])
+                pj = np.array(np.meshgrid(np.arange(H), np.arange(W), indexing='ij'))
+                pj = pj.reshape(2, -1).T
 
-            # Atualiza o ponto interpolado
-            mesh_interpolated[:, i, j] = mesh_perspective[:, i, j] + delta_vi_0
+                distances_squared = np.sum((pj - pi)**2, axis=1).reshape(H, W)
+
+                # Aplica o kernel Gaussiano
+                weights = gaussian_kernel(distances_squared)
+                weights *= mask_resized  # Aplica a máscara
+
+                # Calcula o numerador e o denominador
+                numerator = np.sum(weights * delta_v, axis=(1, 2))
+                denominator = np.sum(weights)
+
+                if denominator > 0:
+                    delta_vi_0 = numerator / denominator
+                else:
+                    delta_vi_0 = 0
+
+                # Atualiza o ponto interpolado
+                mesh_interpolated[:, i, j] = mesh_perspective[:, i, j] + delta_vi_0
 
     return mesh_interpolated
 
@@ -248,7 +263,6 @@ def calculate_total_energy(mask, mesh_estereo, mesh_perspective, vertices, recta
         lambda_r * energia_r +
         lambda_a * energia_a
     )
-    print(energia_total)
     return energia_total
 def energy_objective(vertices_flat, mesh_estereo, mask, mesh_perspective, rectangle_list, r_a, r_b, W, H):
     """Função objetivo para a otimização, agora com suporte a rectangle_list."""
@@ -265,7 +279,7 @@ def energy_objective(vertices_flat, mesh_estereo, mask, mesh_perspective, rectan
 
     # Calcula a energia total
     return calculate_total_energy(mask, mesh_estereo, mesh_perspective, vertices, rectangle_list, r_a, r_b, W, H)
-def create_optimized_mesh(image, uniform_mesh, stereo_mesh, face_mask, rectangle_list, r_a=50, r_b=10, max_iterations=100):
+def create_optimized_mesh(image, uniform_mesh, stereo_mesh, face_mask, rectangle_list, r_a=50, r_b=10, max_iterations=100, mesh_ratio=10):
     """
     Cria a malha otimizada para correção de distorção local em imagens de grande angular.
 
@@ -293,7 +307,7 @@ def create_optimized_mesh(image, uniform_mesh, stereo_mesh, face_mask, rectangle
     H_mesh, W_mesh = uniform_mesh.shape[1:]
 
     # Inicializa os vértices pela interpolação entre as malhas perspectiva e estereográfica
-    vertices_initial = interpolate_mesh(uniform_mesh, stereo_mesh, face_mask)
+    vertices_initial = interpolate_mesh(uniform_mesh, stereo_mesh, face_mask, mesh_ratio)
     vertices_initial_flat = vertices_initial.reshape(-1)
 
     # Define a função objetivo para a otimização
