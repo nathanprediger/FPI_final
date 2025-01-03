@@ -16,19 +16,21 @@ def setup_model():
     return DefaultPredictor(cfg)
 def rectangle_mask(image,image_shape):
     box_mask = []
-    mask_list = []
+    
     H,W,_ = image.shape
     rectangles_list=faceRectangle.get_rectangle_faces(image)
     rectangles_list=faceRectangle.increase_rectangles(rectangles_list, H, W)
     mask = np.zeros(image_shape[:2], dtype=np.uint8)
+    mask_list = np.zeros([len(rectangles_list), H, W], dtype=bool)
+    i=0
     for rect in rectangles_list:
         x = np.zeros(image_shape[:2], dtype=np.uint8)
         x1, y1, x2, y2 = rect.left(), rect.top(), rect.right(), rect.bottom()
         # Preenche a área do retângulo na máscara
         box_mask.append([x1,x2,y1,y2])
-        x = cv2.rectangle(x, (x1, y1), (x2, y2), 1, thickness=-1)
         cv2.rectangle(mask, (x1, y1), (x2, y2), 1, thickness=-1)
-        mask_list.append(x)
+        mask_list[i,y1:y2,x1:x2]=True
+        i+=1
 
     return mask, box_mask, mask_list
 def process_image(image_path):
@@ -63,16 +65,16 @@ def process_image(image_path):
 
     return image, cv2.bitwise_and(combined_mask,rectangles_mask), highlighted_image, rectangle_list, box_list
 
-def display_and_save_results(image, combined_mask, highlighted_image, output_path):
+def display_and_save_results(image, combined_mask, highlighted_image):
     cv2.imshow("Original Image", image)
     cv2.imshow("Subject Mask", combined_mask * 255)
     cv2.imshow("Highlighted Image", highlighted_image)
     
-    cv2.imwrite(output_path + "_mask.png", combined_mask * 255)
-    cv2.imwrite(output_path + "_highlighted.png", highlighted_image)
+    cv2.imwrite("mask.jpg", combined_mask * 255)
+    cv2.imwrite("highlighted.jpg", highlighted_image)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 if __name__ == "__main__":
-    image,combined_mask,highlighted_image,_ = process_image(sys.argv[1])
+    image,combined_mask,highlighted_image,cu, penis= process_image(sys.argv[1])
     print(combined_mask.shape, image.shape)
-    display_and_save_results(image, combined_mask, highlighted_image, "imagens\output")
+    display_and_save_results(image, combined_mask, highlighted_image)

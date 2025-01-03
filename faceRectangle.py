@@ -4,14 +4,18 @@ import dlib
 import cv2
 
 def get_rectangle_faces(image):
-    detector = dlib.get_frontal_face_detector()
-    
-    img_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    
-    # O argumento 1 indica que devemos ampliar a imagem uma vez para detectar mais rostos.
-    dets = detector(img_rgb, 1)
-    print(dets)
-    return dets
+    confidence_threshold = 0.1
+    cnn_face_detector = dlib.cnn_face_detection_model_v1("data/mmod_human_face_detector.dat")
+     # Detect faces
+    detections = cnn_face_detector(image, 0)  # '1' is the upsample factor
+
+    # Filter detections based on confidence
+    filtered_detections = [
+        detection for detection in detections if detection.confidence >= confidence_threshold
+    ]
+
+    # Return only the rectangles of the filtered detections
+    return [detection.rect for detection in filtered_detections]
 
 def increase_rectangles(list_rectangles, H, W):
     modified_rectangles = []
@@ -29,16 +33,16 @@ def increase_rectangles(list_rectangles, H, W):
         else:
             new_y2 = H-1
         if y1 - height//4 > 0:
-            new_y1 = y1 - height // 4
+            new_y1 = y1 - height // 2
         else:
             new_y1 = 0
         # Aumenta a largura pela metade nas duas direções
         if x1 - width//4 > 0:
-            new_x1 = x1 - width // 4
+            new_x1 = x1 - width // 5
         else:
             new_x1 = 0
         if x2 + width//4 < W:
-            new_x2 = x2 + width // 4
+            new_x2 = x2 + width // 3
         else:
             new_x2 = W-1
             
@@ -51,7 +55,6 @@ def increase_rectangles(list_rectangles, H, W):
 def show_rectangles(img, rectangles):
     # Copia a imagem para desenhar os retângulos
     img_with_rectangles = img.copy()
-
     print("Number of faces detected: {}".format(len(rectangles)))
     for i, d in enumerate(rectangles):
         print("Detection {}: Left: {} Top: {} Right: {} Bottom: {}".format(
@@ -60,21 +63,22 @@ def show_rectangles(img, rectangles):
         cv2.rectangle(img_with_rectangles, (d.left(), d.top()), (d.right(), d.bottom()), (0, 255, 0), 2)
     
     # Exibe a imagem com os retângulos
-    cv2.imshow("Detected Faces", img_with_rectangles)
+    cv2.imwrite("Detectedfaces.jpg", img_with_rectangles)
     cv2.waitKey(0)  # Aguarda uma tecla ser pressionada
     cv2.destroyAllWindows()  # Fecha todas as janelas
 
-# # Carrega a imagem e detecta os rostos
-# file=sys.argv[1]
-# print("Processing file: {}".format(file))
-# image = cv2.imread(file)
-# rectangles= get_rectangle_faces(image)
+if __name__ == "__main__":
+    # Carrega a imagem e detecta os rostos
+    file=sys.argv[1]
+    print("Processing file: {}".format(file))
+    image = cv2.imread(file)
+    rectangles= get_rectangle_faces(image)
+    H,W,_ = image.shape
+    # Ajusta os retângulos
+    rectangles = increase_rectangles(rectangles, H, W)
 
-# # Ajusta os retângulos
-# rectangles = increase_rectangles(rectangles)
-
-# # Exibe a imagem com os retângulos ajustados
-# show_rectangles(image, rectangles)
+    # Exibe a imagem com os retângulos ajustados
+    show_rectangles(image, rectangles)
 
 # Finally, if you really want to you can ask the detector to tell you the score
 # for each detection.  The score is bigger for more confident detections.
