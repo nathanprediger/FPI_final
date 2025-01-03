@@ -13,7 +13,7 @@ def get_rectangle_faces(image):
     print(dets)
     return dets
 
-def increase_rectangles(list_rectangles):
+def increase_rectangles(list_rectangles, H, W):
     modified_rectangles = []
     for d in list_rectangles:
         x1, y1 = d.left(), d.top()
@@ -24,11 +24,24 @@ def increase_rectangles(list_rectangles):
 
         # Ajusta as dimensões
         # Aumenta a altura pela metade no topo e aumenta em um quinto embaixo
-        new_y2 = y2 + height // 5
-        new_y1 = y1 - height // 2
+        if y2 + height//5 < H:
+            new_y2 = y2 + height // 5
+        else:
+            new_y2 = H-1
+        if y1 - height//4 > 0:
+            new_y1 = y1 - height // 4
+        else:
+            new_y1 = 0
         # Aumenta a largura pela metade nas duas direções
-        new_x1 = x1 - width // 2
-        new_x2 = x2 + width // 2
+        if x1 - width//4 > 0:
+            new_x1 = x1 - width // 4
+        else:
+            new_x1 = 0
+        if x2 + width//4 < W:
+            new_x2 = x2 + width // 4
+        else:
+            new_x2 = W-1
+            
 
         # Cria um novo retângulo com as dimensões ajustadas
         new_rectangle = dlib.rectangle(new_x1, new_y1, new_x2, new_y2)

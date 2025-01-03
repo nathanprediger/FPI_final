@@ -1,10 +1,13 @@
 import cv2
 import numpy as np
-from energy import create_optimized_mesh
 from stereographic import get_uniform_stereo_mesh
 import matplotlib.pyplot as plt
 from mask import process_image
-from energy import interpolate_mesh
+from teste import create_optimized_mesh, interpolate_mesh
+from energy import resize_mask
+import torch
+
+
 
 def apply_mesh_warp(image, optimized_mesh, mesh_ds_ratio):
     """
@@ -45,24 +48,34 @@ def apply_mesh_warp(image, optimized_mesh, mesh_ds_ratio):
     return warped_image
 
 
-
-
 if __name__ == "__main__":
     image_path = "imagens/teste3.jpg"
     mesh_ds_ratio = 10
-    fov = 97
-    Q = 0
-    image, face_mask, highlighted_image, rect_list = process_image(image_path)
+    fov = (97 + 30)/2
+    Q = 4
+    image, face_mask, highlighted_image, rect_list, box_list = process_image(image_path)
+    print(rect_list)
     H,W,_=image.shape
     half_diagonal = np.linalg.norm([H + 2 * Q * mesh_ds_ratio, W + 2 * Q * mesh_ds_ratio]) / 2.
     ra = half_diagonal / 2.
     rb = half_diagonal / (2 * np.log(99))
     # Gerar malhas uniforme e estereográfica
     uniform_mesh, stereo_mesh = get_uniform_stereo_mesh(image, np.pi*fov/180, Q, mesh_ds_ratio)
+    resized_mask = resize_mask(face_mask, uniform_mesh, mesh_ds_ratio)
+    resized_box_list = []  # Inicializa a lista vazia
+    for box in box_list:
+        resized_box = resize_mask(box, uniform_mesh, mesh_ds_ratio)  # Resize mask
+        resized_box = torch.from_numpy(resized_box)  # Converte para tensor PyTorch
+        resized_box_list.append(resized_box)  # Adiciona à lista
+
+    # Empilha todos os tensores na lista em um tensor PyTorch
+    resized_box_list = torch.stack(resized_box_list)
+
     # Criar malha otimizada
-    optimized_mesh = create_optimized_mesh(image, uniform_mesh, stereo_mesh, face_mask, rect_list, ra, rb, 1000, mesh_ds_ratio)
-  
+    optimized_mesh = create_optimized_mesh(image, uniform_mesh, stereo_mesh, resized_mask, Q, ra, rb, 20000, len(rect_list), resized_box_list)
     # Aplicar a malha otimizada na imagem
+    Hm, Wm = optimized_mesh.shape[1:]
+    optimized_mesh = optimized_mesh[:, Q:-Q, Q:-Q]
     X_distorted, Y_distorted = uniform_mesh
     plt.figure(figsize=(12, 18))
     plt.plot(X_distorted, Y_distorted, color="blue", linewidth=0.5)  # Vertical lines
@@ -70,7 +83,9 @@ if __name__ == "__main__":
     plt.axis("equal")
     plt.axis("off")
     plt.show()
+
     corrected_image = apply_mesh_warp(image, optimized_mesh, mesh_ds_ratio)
+    
     X_distorted, Y_distorted = optimized_mesh
     plt.figure(figsize=(12, 18))
     plt.plot(X_distorted, Y_distorted, color="blue", linewidth=0.5)  # Vertical lines
@@ -79,7 +94,8 @@ if __name__ == "__main__":
     plt.axis("off")
     plt.show()
     # Exibir resultados
+    cv2.imwrite("output.jpg", corrected_image)
     cv2.imshow("Imagem Original", image)
-    cv2.imshow("Imagem Corrigida", corrected_image)
+    #cv2.imshow("Imagem Corrigida", corrected_image)
     cv2.waitKey(0)
     cv2.destroyAllWindows()

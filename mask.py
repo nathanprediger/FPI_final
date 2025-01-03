@@ -15,21 +15,29 @@ def setup_model():
     cfg.MODEL.DEVICE = "cpu"
     return DefaultPredictor(cfg)
 def rectangle_mask(image,image_shape):
+    box_mask = []
+    mask_list = []
+    H,W,_ = image.shape
     rectangles_list=faceRectangle.get_rectangle_faces(image)
-    rectangles_list=faceRectangle.increase_rectangles(rectangles_list)
+    rectangles_list=faceRectangle.increase_rectangles(rectangles_list, H, W)
     mask = np.zeros(image_shape[:2], dtype=np.uint8)
     for rect in rectangles_list:
+        x = np.zeros(image_shape[:2], dtype=np.uint8)
         x1, y1, x2, y2 = rect.left(), rect.top(), rect.right(), rect.bottom()
         # Preenche a área do retângulo na máscara
-        cv2.rectangle(mask, (x1, y1), (x2, y2), 255, thickness=-1)
-    return mask, rectangles_list
+        box_mask.append([x1,x2,y1,y2])
+        x = cv2.rectangle(x, (x1, y1), (x2, y2), 1, thickness=-1)
+        cv2.rectangle(mask, (x1, y1), (x2, y2), 1, thickness=-1)
+        mask_list.append(x)
+
+    return mask, box_mask, mask_list
 def process_image(image_path):
     predictor=setup_model()
     image = cv2.imread(image_path)
     image_rgb = cv2.cvtColor(image,cv2.COLOR_BGR2RGB)
     
     image_shape=list(image.shape)
-    rectangles_mask, rectangle_list = rectangle_mask(image,image_shape)
+    rectangles_mask, rectangle_list, box_list = rectangle_mask(image,image_shape)
     output = predictor(image_rgb)
     
     instances = output["instances"]
@@ -53,7 +61,7 @@ def process_image(image_path):
     # Combinar a imagem original com o overlay verde transparente
     highlighted_image = cv2.addWeighted(highlighted_image, 1, green_overlay, alpha, 0)
 
-    return image, cv2.bitwise_and(combined_mask,rectangles_mask), highlighted_image, rectangle_list
+    return image, cv2.bitwise_and(combined_mask,rectangles_mask), highlighted_image, rectangle_list, box_list
 
 def display_and_save_results(image, combined_mask, highlighted_image, output_path):
     cv2.imshow("Original Image", image)
