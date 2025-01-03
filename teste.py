@@ -86,60 +86,65 @@ class Minimizer(nn.Module):
             H, W = self.mesh_stereo_torch.shape[1:]
             masks = self.box_mask.view(self.K, 1, H, W) * self.face_weights.view(1, 1, H, W)
             face_energy = masks * self.mi * ((self.vertices-target_mesh) ** 2)
-            sim_reg = (self.similaridade[:, 0] - 1.0) ** 2
-            face_energy = face_energy.sum()
-            face_energy += 1e4 * sim_reg.sum()
+            sim_reg = ((self.similaridade[:, 0] - 1.0) ** 2)*2000
+            face_energy = ((face_energy.sum()))
+            face_energy += 1e4 * sim_reg.mean()
 
             return face_energy
 
 
         def bending_energy():
 
-            coordinate_padding_u = torch.zeros_like(self.mi[1:, :]).unsqueeze(0)
-            diff_u = self.vertices[:, 1:, :] - self.vertices[:, :-1, :]  # Horizontal difference
-            diff_u = torch.cat([coordinate_padding_u, diff_u], dim=0)
+            # coordinate_padding_u = torch.zeros_like(self.mi[1:, :]).unsqueeze(0)
+            # diff_u = self.vertices[:, 1:, :] - self.vertices[:, :-1, :]  # Horizontal difference
+            # diff_u = torch.cat([coordinate_padding_u, diff_u], dim=0)
             
-            diff_uniform_u = self.mesh_uniform_torch[:, 1:, :] - self.mesh_uniform_torch[:, :-1, :]
-            unit_diff_u = diff_uniform_u / (torch.norm(diff_uniform_u, dim=0)).unsqueeze(0)
-            unit_diff_u = torch.cat([coordinate_padding_u, unit_diff_u], dim=0)
-            line_bending_u_loss = torch.square(torch.norm(torch.cross(diff_u, unit_diff_u, dim=0), dim=0))
+            # diff_uniform_u = self.mesh_uniform_torch[:, 1:, :] - self.mesh_uniform_torch[:, :-1, :]
+            # unit_diff_u = diff_uniform_u / (torch.norm(diff_uniform_u, dim=0)).unsqueeze(0)
+            # unit_diff_u = torch.cat([coordinate_padding_u, unit_diff_u], dim=0)
+            # line_bending_u_loss = torch.square(torch.norm(torch.cross(diff_u, unit_diff_u, dim=0), dim=0))
             
-            coordinate_padding_v = torch.zeros_like(self.mi[:, 1:]).unsqueeze(0)
-            diff_v = self.vertices[:, :, 1:] - self.vertices[:, :, :-1]  # Vertical difference
-            diff_v = torch.cat([coordinate_padding_v, diff_v], dim=0)
-            diff_uniform_v = self.mesh_uniform_torch[:, :, 1:] - self.mesh_uniform_torch[:, :, :-1]
-            unit_diff_v = diff_uniform_v / (torch.norm(diff_uniform_v, dim=0)).unsqueeze(0)
-            unit_diff_v = torch.cat([coordinate_padding_v, unit_diff_v], dim=0)
+            # coordinate_padding_v = torch.zeros_like(self.mi[:, 1:]).unsqueeze(0)
+            # diff_v = self.vertices[:, :, 1:] - self.vertices[:, :, :-1]  # Vertical difference
+            # diff_v = torch.cat([coordinate_padding_v, diff_v], dim=0)
+            # diff_uniform_v = self.mesh_uniform_torch[:, :, 1:] - self.mesh_uniform_torch[:, :, :-1]
+            # unit_diff_v = diff_uniform_v / (torch.norm(diff_uniform_v, dim=0)).unsqueeze(0)
+            # unit_diff_v = torch.cat([coordinate_padding_v, unit_diff_v], dim=0)
 
-            line_bending_v_loss = torch.square(torch.norm(torch.cross(diff_v, unit_diff_v, dim=0), dim=0))
+            # line_bending_v_loss = torch.square(torch.norm(torch.cross(diff_v, unit_diff_v, dim=0), dim=0))
             
-            return (line_bending_u_loss.sum() + line_bending_v_loss.sum()) / 2
-            # unix = self.mesh_uniform_torch[:, :, 1:] - self.mesh_uniform_torch[:, :, :-1]
-            # uniy = self.mesh_uniform_torch[:, 1:, :] - self.mesh_uniform_torch[:, :-1, :]
+            # return (line_bending_u_loss.sum() + line_bending_v_loss.sum()) / 2
+            vertx = self.vertices[:, :, 1:] - self.vertices[:, :, :-1]  # Horizontal difference
+            verty = self.vertices[:, 1:, :] - self.vertices[:, :-1, :]  # Vertical difference
+            unix = self.mesh_uniform_torch[:, :, 1:] - self.mesh_uniform_torch[:, :, :-1]
+            uniy = self.mesh_uniform_torch[:, 1:, :] - self.mesh_uniform_torch[:, :-1, :]
 
             # # Normalize the uniform mesh differences
-            # e_ij_i = unix / (torch.norm(unix, dim=0, keepdim=True) + 1e-8)
-            # e_ij_j = uniy / (torch.norm(uniy, dim=0, keepdim=True) + 1e-8)
+            e_ij_i = unix / (torch.norm(unix, dim=0, keepdim=True) + 1e-8)
+            e_ij_j = uniy / (torch.norm(uniy, dim=0, keepdim=True) + 1e-8)
 
             # # Compute bending energy
-            # energy = (torch.norm(vertx[..., 0] * e_ij_i[..., 1] - vertx[..., 1] * e_ij_i[..., 0]) ** 2).sum()
-            # energy += (torch.norm(verty[..., 0] * e_ij_j[..., 1] - verty[..., 1] * e_ij_j[..., 0]) ** 2).sum()
+            energy = (torch.norm(vertx[..., 0] * e_ij_i[..., 1] - vertx[..., 1] * e_ij_i[..., 0]) ** 2).sum()
+            energy += (torch.norm(verty[..., 0] * e_ij_j[..., 1] - verty[..., 1] * e_ij_j[..., 0]) ** 2).sum()
 
-            # return energy
+            return energy
 
 
         def regularization_energy():
-            coordinate_padding_u = torch.zeros_like(self.mi[1:, :]).unsqueeze(0)
-            diff_u = self.vertices[:, 1:, :] - self.vertices[:, :-1, :]  # Horizontal difference
-            diff_u = torch.cat([coordinate_padding_u, diff_u], dim=0)
+            diffs_x = self.vertices[:, :, 1:] - self.vertices[:, :, :-1]
+            diffs_y = self.vertices[:, 1:, :] - self.vertices[:, :-1, :]
+            return torch.sum(diffs_x.pow(2)) + torch.sum(diffs_y.pow(2))
+        
+            # coordinate_padding_u = torch.zeros_like(self.mi[1:, :]).unsqueeze(0)
+            # diff_u = self.vertices[:, 1:, :] - self.vertices[:, :-1, :]  # Horizontal difference
+            # diff_u = torch.cat([diff_u, coordinate_padding_u], dim=0)
             
-            coordinate_padding_v = torch.zeros_like(self.mi[:, 1:]).unsqueeze(0)
-            diff_v = self.vertices[:, :, 1:] - self.vertices[:, :, :-1]  # Vertical difference
-            diff_v = torch.cat([coordinate_padding_v, diff_v], dim=0)
+            # coordinate_padding_v = torch.zeros_like(self.mi[:, 1:]).unsqueeze(0)
+            # diff_v = self.vertices[:, :, 1:] - self.vertices[:, :, :-1]  # Vertical difference
+            # diff_v = torch.cat([diff_v, coordinate_padding_v], dim=0)
             
             
-            return (torch.square(torch.norm(diff_u).sum()) + torch.square(torch.norm(diff_v).sum())) / 2
-
+            # return torch.mean((torch.square(torch.norm(diff_u)) + torch.square(torch.norm(diff_v))) / 2)
 
         def indicator(condition):
             return torch.where(condition, torch.tensor(1.0, device=condition.device), torch.tensor(0.0, device=condition.device))
@@ -174,7 +179,7 @@ class Minimizer(nn.Module):
         
 
 
-        lambda_f, lambda_b, lambda_r, lambda_a = 4, 2, 0.5, 4
+        lambda_f, lambda_b, lambda_r, lambda_a = 4, 2, 0.5, 2
         Ef = face_energy()
         Eb = bending_energy()
         Er = regularization_energy()

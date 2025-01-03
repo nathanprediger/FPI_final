@@ -7,7 +7,9 @@ def get_rectangle_faces(image):
     confidence_threshold = 0.1
     cnn_face_detector = dlib.cnn_face_detection_model_v1("data/mmod_human_face_detector.dat")
      # Detect faces
-    detections = cnn_face_detector(image, 0)  # '1' is the upsample factor
+    resized_image = cv2.resize(image, (0, 0), fx=0.5, fy=0.5)  # Scale down to 50%
+    detections = cnn_face_detector(resized_image, 0)  # '1' is the upsample factor
+    
 
     # Filter detections based on confidence
     filtered_detections = [
@@ -22,26 +24,31 @@ def increase_rectangles(list_rectangles, H, W):
     for d in list_rectangles:
         x1, y1 = d.left(), d.top()
         x2, y2 = d.right(), d.bottom()
+        
 
+        x1 = x1*2
+        y1 = y1*2
+        x2 = x2*2
+        y2 = y2*2
         height = y2 - y1
         width = x2 - x1
 
         # Ajusta as dimensões
         # Aumenta a altura pela metade no topo e aumenta em um quinto embaixo
-        if y2 + height//5 < H:
-            new_y2 = y2 + height // 5
+        if y2 + height//3 < H:
+            new_y2 = y2 + height // 3
         else:
             new_y2 = H-1
-        if y1 - height//4 > 0:
-            new_y1 = y1 - height // 2
+        if y1 - height//3 > 0:
+            new_y1 = y1 - height // 3
         else:
             new_y1 = 0
         # Aumenta a largura pela metade nas duas direções
-        if x1 - width//4 > 0:
-            new_x1 = x1 - width // 5
+        if x1 - width//3 > 0:
+            new_x1 = x1 - width // 3
         else:
             new_x1 = 0
-        if x2 + width//4 < W:
+        if x2 + width//3 < W:
             new_x2 = x2 + width // 3
         else:
             new_x2 = W-1

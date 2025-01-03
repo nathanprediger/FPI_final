@@ -58,6 +58,57 @@ def resolve_mask_overlaps(box_list, rect_list):
 
     return updated_box_list, rect_list
 
+# def merge_overlapping_masks(box_list, rect_list):
+#     """
+#     Junta as máscaras de retângulos sobrepostos em box_list e retorna a lista final.
+
+#     Args:
+#         box_list (list of np.ndarray): Lista de máscaras correspondentes a rect_list.
+#         rect_list (list of list): Lista de retângulos no formato [x1, x2, y1, y2].
+
+#     Returns:
+#         list of np.ndarray, list of list: Lista de máscaras atualizada e a lista de retângulos correspondente.
+#     """
+#     def is_overlapping(rect1, rect2):
+#         # Verifica se dois retângulos se sobrepõem
+#         x1_1, x2_1, y1_1, y2_1 = rect1
+#         x1_2, x2_2, y1_2, y2_2 = rect2
+#         return not (x2_1 < x1_2 or x2_2 < x1_1 or y2_1 < y1_2 or y2_2 < y1_1)
+
+#     def merge_masks(mask1, mask2):
+#         # Junta duas máscaras usando operação lógica OR
+#         return np.logical_or(mask1, mask2)
+
+#     merged = [False] * len(rect_list)
+#     final_box_list = []
+#     final_rect_list = []
+
+#     for i in range(len(rect_list)):
+#         if merged[i]:
+#             continue
+
+#         current_mask = box_list[i]
+#         current_rect = rect_list[i]
+#         for j in range(i + 1, len(rect_list)):
+#             if not merged[j] and is_overlapping(current_rect, rect_list[j]):
+#                 # Atualiza a máscara e o retângulo combinados
+#                 current_mask = merge_masks(current_mask, box_list[j])
+#                 current_rect = [
+#                     min(current_rect[0], rect_list[j][0]),
+#                     max(current_rect[1], rect_list[j][1]),
+#                     min(current_rect[2], rect_list[j][2]),
+#                     max(current_rect[3], rect_list[j][3]),
+#                 ]
+#                 merged[j] = True
+
+#         # Adiciona o retângulo e a máscara combinados à lista final
+#         final_box_list.append(current_mask)
+#         final_rect_list.append(current_rect)
+#         merged[i] = True
+
+#     return final_box_list, final_rect_list
+
+
 
 def apply_mesh_warp(image, optimized_mesh, mesh_ds_ratio):
     """
@@ -99,12 +150,12 @@ def apply_mesh_warp(image, optimized_mesh, mesh_ds_ratio):
 
 
 if __name__ == "__main__":
-    image_path = "data/14_116.jpg"
-    mesh_ds_ratio = 10
+    image_path = "data/1_97.jpg"
+    mesh_ds_ratio = 40
     fov = 97
     Q = 4
     image, face_mask, highlighted_image, rect_list, box_list = process_image(image_path)
-    box_list,rect_list=resolve_mask_overlaps(box_list,rect_list)
+    #box_list,rect_list=resolve_mask_overlaps(box_list,rect_list)
     H,W,_=image.shape
     half_diagonal = np.linalg.norm([H + 2 * Q * mesh_ds_ratio, W + 2 * Q * mesh_ds_ratio]) / 2.
     ra = half_diagonal / 2.
@@ -141,8 +192,9 @@ if __name__ == "__main__":
         optim.step()
     optimized_mesh = model.vertices.detach().cpu().numpy()
     optimized_mesh = optimized_mesh[:, Q:-Q, Q:-Q]
-    print(optimized_mesh.shape)
     warped_image = apply_mesh_warp(image, optimized_mesh, mesh_ds_ratio)
+    print(warped_image.shape)
+    warped_image = warped_image[(mesh_ds_ratio*Q)//2:(-mesh_ds_ratio*Q)//2, (mesh_ds_ratio*Q)//2:(-mesh_ds_ratio*Q)//2, :]
     
     print(rect_list)
     
