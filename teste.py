@@ -87,7 +87,7 @@ class Minimizer(nn.Module):
             masks = self.box_mask.view(self.K, 1, H, W) * self.face_weights.view(1, 1, H, W)
             face_energy = masks * self.mi * ((self.vertices-target_mesh) ** 2)
             sim_reg = ((self.similaridade[:, 0] - 1.0) ** 2)*2000
-            face_energy = ((face_energy.sum()))
+            face_energy = ((face_energy.sum())/self.K)
             face_energy += 1e4 * sim_reg.mean()
 
             return face_energy
@@ -114,6 +114,7 @@ class Minimizer(nn.Module):
             # line_bending_v_loss = torch.square(torch.norm(torch.cross(diff_v, unit_diff_v, dim=0), dim=0))
             
             # return (line_bending_u_loss.sum() + line_bending_v_loss.sum()) / 2
+            
             vertx = self.vertices[:, :, 1:] - self.vertices[:, :, :-1]  # Horizontal difference
             verty = self.vertices[:, 1:, :] - self.vertices[:, :-1, :]  # Vertical difference
             unix = self.mesh_uniform_torch[:, :, 1:] - self.mesh_uniform_torch[:, :, :-1]
@@ -133,7 +134,7 @@ class Minimizer(nn.Module):
         def regularization_energy():
             diffs_x = self.vertices[:, :, 1:] - self.vertices[:, :, :-1]
             diffs_y = self.vertices[:, 1:, :] - self.vertices[:, :-1, :]
-            return torch.sum(diffs_x.pow(2)) + torch.sum(diffs_y.pow(2))
+            return torch.sum(torch.norm(diffs_x).pow(2)) + torch.sum(torch.norm(diffs_y).pow(2))
         
             # coordinate_padding_u = torch.zeros_like(self.mi[1:, :]).unsqueeze(0)
             # diff_u = self.vertices[:, 1:, :] - self.vertices[:, :-1, :]  # Horizontal difference
@@ -179,38 +180,12 @@ class Minimizer(nn.Module):
         
 
 
-        lambda_f, lambda_b, lambda_r, lambda_a = 4, 2, 0.5, 2
+        lambda_f, lambda_b, lambda_r, lambda_a = 4, 2, 0.5, 4
         Ef = face_energy()
         Eb = bending_energy()
         Er = regularization_energy()
         Ea = asymmetric_boundary_energy()
         return lambda_f * Ef + lambda_b * Eb + lambda_r * Er + lambda_a * Ea
-
-
-        # def create_optimized_mesh(image, uniform_mesh, stereo_mesh, face_mask, Q, ra, rb, iterations, K, box_mask):
-        #     mesh_uniform_torch = torch.tensor(uniform_mesh, dtype=torch.float32, requires_grad=False)
-        #     mesh_stereo_torch = torch.tensor(stereo_mesh, dtype=torch.float32, requires_grad=False)
-
-        #     mi = calculate_mi(uniform_mesh, ra, rb)
-        #     similaridade = torch.tensor([1.0, 0.0], dtype=torch.float32).unsqueeze(0).repeat(K, 1)
-        #     vertices = interpolate_mesh(uniform_mesh, stereo_mesh, face_mask).clone().detach().requires_grad_(True)
-        #     face_weights = torch.from_numpy(face_mask)
-
-
-        #     similaridade.requires_grad_(True)
-
-        #     optimizer = torch.optim.SGD([vertices], lr=0.01)
-
-        #     for step in range(iterations):
-        #         optimizer.zero_grad()
-        #         matrizes = gerar_matrizes_similaridade(similaridade, K)
-        #         energy = total_energy(vertices, mesh_stereo_torch, face_weights, *uniform_mesh.shape[1:], mesh_uniform_torch, Q, mi, matrizes, box_mask, K)
-        #         energy.backward()
-        #         optimizer.step()
-        #         if step % 10 == 0:
-        #             print(f"Step {step}, Energy: {energy.item()}")
-
-        #     return vertices.detach().cpu().numpy()
 
 
         
