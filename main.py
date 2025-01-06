@@ -109,7 +109,6 @@ import numpy as np
 #     return final_box_list, final_rect_list
 
 
-
 def apply_mesh_warp(image, optimized_mesh, mesh_ds_ratio):
     """
     Aplica a malha otimizada para ajustar a distorção da imagem.
@@ -150,11 +149,15 @@ def apply_mesh_warp(image, optimized_mesh, mesh_ds_ratio):
 
 
 if __name__ == "__main__":
-    image_path = "imagens/teste9.jpg"
-    mesh_ds_ratio = 40
-    fov = 82
-    Q = 4
+    image_path = "data/teste3.jpg"
     image, face_mask, highlighted_image, rect_list, box_list = process_image(image_path)
+    H,W,_=image.shape
+    mesh_ds_ratio = np.ceil(H*W/25000)
+    print(mesh_ds_ratio)
+    fov = 97
+    Q = 4
+    
+   
     H,W,_=image.shape
     half_diagonal = np.linalg.norm([H + 2 * Q * mesh_ds_ratio, W + 2 * Q * mesh_ds_ratio]) / 2.
     ra = half_diagonal / 2.
