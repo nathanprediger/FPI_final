@@ -149,10 +149,10 @@ def apply_mesh_warp(image, optimized_mesh, mesh_ds_ratio):
 
 
 if __name__ == "__main__":
-    image_path = "data/teste3.jpg"
+    image_path = "data/2_97.jpg"
     image, face_mask, highlighted_image, rect_list, box_list = process_image(image_path)
     H,W,_=image.shape
-    mesh_ds_ratio = np.ceil(H*W/25000)
+    mesh_ds_ratio = int(np.ceil(np.sqrt(H*W/3000)))
     print(mesh_ds_ratio)
     fov = 97
     Q = 4
@@ -189,7 +189,7 @@ if __name__ == "__main__":
     warped_image = apply_mesh_warp(image, optimized_mesh, mesh_ds_ratio)
     print(warped_image.shape)
     warped_image = warped_image[(mesh_ds_ratio)//2:(-mesh_ds_ratio)//2, (mesh_ds_ratio)//2:(-mesh_ds_ratio)//2, :]
-    # Exibir
+    # # Exibir
     X_distorted, Y_distorted = optimized_mesh
     plt.figure(figsize=(12, 18))
     plt.plot(X_distorted, Y_distorted, color="blue", linewidth=0.5)  # Vertical lines
@@ -197,7 +197,7 @@ if __name__ == "__main__":
     plt.axis("equal")
     plt.axis("off")
     plt.show()
-    # Exibir resultados
+    # # Exibir resultados
     cv2.imwrite("output.jpg", warped_image)
     cv2.imshow("Imagem Corrigida", warped_image)
     #cv2.imshow("Imagem Corrigida", corrected_image)
